@@ -34,6 +34,7 @@ Guidelines:
 Additional Rules:
 - In Python, include runtime measurement using the `time` library.
 - Conclude with "TERMINATE" only if the script runs successfully and prints a total runtime below 50ms. Otherwise, optimize and retry.
+- TERMNATE SHALL BE THE LAST WORD IF ITS OUTPUT IS CORRECT AND RUNTIME IS BELOW 50ms.
 """
 )
 
@@ -47,7 +48,7 @@ user_proxy = autogen.UserProxyAgent(
     max_consecutive_auto_reply=4,
     is_termination_msg=lambda x: x.get("content", "").rstrip().endswith("TERMINATE"),
     code_execution_config={"work_dir": "web"},
-    llm_config=llm_config, 
+    llm_config=False, 
     system_message="""REPLY TERMINATE IF THE TASK HAS BEEN SOLVED AT FULL SATISFACTION."""
 )
 
