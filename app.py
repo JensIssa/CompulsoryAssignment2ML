@@ -1,5 +1,4 @@
 import autogen;
-from autogen import GroupChat;
 
 
 config_list = [
@@ -18,45 +17,22 @@ llm_config= {
     "temperature": 0,
 }
 
-assistant = autogen.AssistantAgent(
+assistant = autogen.ConversableAgent(
     name="Developer",
     llm_config=llm_config,
-  system_message="""You are a skilled AI assistant.
-Solve tasks using coding and language expertise. When needed, provide Python code or shell scripts in appropriate code blocks for the user to execute.
-
-Guidelines:
-1. Use code to gather or process information (e.g., web search, file operations, get current date/time). Output sufficient information before solving tasks directly using language skills.
-2. For tasks requiring code, provide complete, executable scripts. Use `print` for outputs and include comments like `# filename: <filename>` if saving the code is necessary.
-3. Do not give incomplete code or ask users to modify it. Ensure the task can proceed after your code is executed.
-4. Check user-executed results. Fix errors with updated full scripts or adjust the approach as needed until the task is resolved.
-5. Verify final answers with evidence where possible.
+  system_message="""You are a helpful AI assistant.
+Solve tasks using your coding and language skills.
+In the following cases, suggest python code (in a python coding block) or shell script (in a sh coding block) for the user to execute.
+1. When you need to collect info, use the code to output the info you need, for example, browse or search the web, download/read a file, print the content of a webpage or a file, get the current date/time, check the operating system. After sufficient info is printed and the task is ready to be solved based on your language skill, you can solve the task by yourself.
+2. When you need to perform some task with code, use the code to perform the task and output the result. Finish the task smartly.
+Solve the task step by step if you need to. If a plan is not provided, explain your plan first. Be clear which step uses code, and which step uses your language skill.
+When using code, you must indicate the script type in the code block. The user cannot provide any other feedback or perform any other action beyond executing the code you suggest. The user can't modify your code. So do not suggest incomplete code which requires users to modify. Don't use a code block if it's not intended to be executed by the user.
+If you want the user to save the code in a file before executing it, put # filename: <filename> inside the code block as the first line. Don't include multiple code blocks in one response. Do not ask users to copy and paste the result. Instead, use 'print' function for the output when relevant. Check the execution result returned by the user.
+If the result indicates there is an error, fix the error and output the code again. Suggest the full code instead of partial code or code changes. If the error can't be fixed or if the task is not solved even after the code is executed successfully, analyze the problem, revisit your assumption, collect additional info you need, and think of a different approach to try.
+When you find an answer, verify the answer carefully. Include verifiable evidence in your response if possible.
+Reply 'TERMINATE' in the end when everything is done.
 """
 )
-
-qa_agent = autogen.AssistantAgent(
-    name="QA_Agent",
-    llm_config=llm_config,
-    system_message="""
-You are a QA (Quality Assurance) agent.
-
-Your primary responsibilities:
-1. Validate the outputs of tasks, especially code and logical responses, for accuracy, efficiency, and completeness.
-2. If the output is correct:
-   - Provide confirmation and highlight why it is correct.
-3. If the output has errors:
-   - Clearly explain the issue.
-   - Provide actionable suggestions or corrections.
-   - If needed, propose improved or alternative solutions.
-4. Ensure all responses meet the task's requirements and are free of ambiguities.
-
-Guidelines:
-- Respond with structured feedback, separating issues, suggestions, and resolutions.
-- Always re-verify after proposing corrections to confirm their effectiveness.
-- Use clear and concise language to explain QA results.
-"""
-)
-
-
 
 user_proxy = autogen.UserProxyAgent(
     name="user_proxy",
@@ -65,40 +41,8 @@ user_proxy = autogen.UserProxyAgent(
     is_termination_msg=lambda x: x.get("content", "").rstrip().endswith("TERMINATE"),
     code_execution_config={"work_dir": "web"},
     llm_config=llm_config, 
-    system_message="""REPLY TERMINATE IF THE TASK HAS BEEN SOLVED AT FULL SATISFACTION. TERMINATE SHALL BE THE LAST WORD."""
+    system_message="""REPLY TERMINATE IF THE TASK HAS BEEN SOLVED AT FULL SATISFACTION."""
 )
-
-
-groupchat = autogen.GroupChat(
-  agents=[user_proxy, assistant, qa_agent],
-  messages=[],
-  max_round=100,
-  enable_clear_history=False,
-)
-
-manager = autogen.GroupChatManager(groupchat=groupchat, llm_config=llm_config, system_message="""You are the Group Manager of a multi-agent system.
-
-Your primary rule: **No agent can speak twice in a row.** This applies to all agents, including the Assistant and QA Agents. Strictly alternate between agents to maintain balance.
-
-Responsibilities:
-1. Assign speaking turns based on roles:
-   - The **Assistant Agent** solves tasks using coding and language expertise.
-   - The **QA Agent** validates outputs for accuracy and completeness.
-   - The **User Proxy Agent** interacts with the user and confirms when a task is resolved.
-2. Enforce alternation:
-   - Never allow the same agent to take consecutive turns.
-   - Follow logical transitions (e.g., Assistant → QA → User Proxy or QA → Assistant → User Proxy).
-3. Manage workflow:
-   - Ensure QA feedback follows the Assistant's work before finalizing a task.
-   - Switch to the User Proxy Agent only when the task is resolved.
-   - Intervene if agents are stuck or not fulfilling their roles.
-4. Terminate the conversation when the task is fully resolved.
-
-Guidelines:
-- Be strict: Never allow any agent to act twice in a row.
-- Ensure smooth, efficient task resolution.
-- Maintain clear and concise communication at all times.
-""")
 
 task = """
 Title: Average of numbers.
@@ -106,14 +50,4 @@ Title: Average of numbers.
 Write a Python function that takes a list of numbers and returns the average of the numbers.
 """
 
-
-user_proxy.initiate_chat(
-    manager, message=task
-)
-
-
-
-
-
-
-
+user_proxy.initiate_chat(assistant,message="""Solve the following problem \n\n""" + task)
